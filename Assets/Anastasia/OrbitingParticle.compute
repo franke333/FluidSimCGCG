@@ -1,0 +1,54 @@
+﻿
+//This directive declares OrbitingParticle as a compute shader kernel 
+//that will be executed. A kernel is essentially a function that 
+//can be called from C# scripts to perform parallel computations on the GPU.
+#pragma kernel OrbitingStars
+
+//A global variable that holds the current time. It's updated from C# script to animate the particles over time.
+float time;
+
+//A read-write structured buffer(not only read as in StructuredBuffer<type>)
+//that stores the result of the computation. Each element in this buffer is a 3D vector (float3) representing the position of a particle.
+RWStructuredBuffer<float3> Result;
+
+
+// A function to generate a pseudo-random float number based on 
+//the input value and an optional seed. It uses the sin function and an arbitrary constant to create randomness.
+float random(float value, float seed = 0.546)
+{
+    float res = frac(sin(value + seed) * 143758.5453);
+    return res;
+}
+// Utilizes the random function to generate a vector of three pseudo-random numbers.
+float3 random3(float value)
+{
+    return float3(
+		random(value, 3.9812),
+		random(value, 7.1536),
+		random(value, 5.7241)
+	);
+}
+
+//This attribute specifies the number of threads per 
+//thread group in each dimension (x, y, z). Here, it's set 
+//to 64 threads in the x-dimension and 1 in both y and z, which means each thread group consists of 64 threads in total.
+[numthreads(64, 1, 1)]
+
+// The main function of the compute 
+//shader that calculates the orbiting position of each particle. 
+//The id.x uniquely identifies each thread (and thus each particle) being processed.
+void OrbitingStars(uint3 id : SV_DispatchThreadID)
+{
+    //we need positioning stars
+    
+    
+    float3 sinDir = normalize(random3(id.x) - 0.5);
+    float3 vec = normalize(random3(id.x + 7.1393) - 0.5);
+    float3 cosDir = normalize(cross(sinDir, vec));
+
+    float scaledTime = time * 0.5 + random(id.x) * 712.131234;
+
+    float3 pos = sinDir * sin(scaledTime) + cosDir * cos(scaledTime);
+
+    Result[id.x] = pos * 2;
+}
