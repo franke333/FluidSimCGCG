@@ -342,6 +342,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 1986898092}
+  - component: {fileID: 1986898094}
   - component: {fileID: 1986898093}
   m_Layer: 0
   m_Name: Sim
@@ -360,7 +361,7 @@ Transform:
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 1.12}
-  m_LocalScale: {x: 5.587555, y: 1.898, z: 2.101}
+  m_LocalScale: {x: 2, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 0}
@@ -374,19 +375,31 @@ MonoBehaviour:
   m_GameObject: {fileID: 1986898090}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 881f30e36511b0c48a449f8d7e9ec9cd, type: 3}
+  m_Script: {fileID: 11500000, guid: eaeaf3d163519ba49a4b68d91610f752, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  count: 400
-  scale: 0.2
-  boundsSize: {x: 20, y: 10, z: 10}
-  gravity: 0
-  smoothingRadius: 1.3
-  targetDensity: 2.75
-  pressureMultiplier: 0.5
-  mass: 0.5
+  positions: []
+  scale: 0.15
   mesh: {fileID: 10207, guid: 0000000000000000e000000000000000, type: 0}
   material: {fileID: 2100000, guid: 15fa3a25d8239e9439671a77436649fb, type: 2}
+--- !u!114 &1986898094
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1986898090}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2580caf1e093cd049811433c26628147, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  compute: {fileID: 7200000, guid: 8fe6f9d9aca80d04db0b4c8bd7f245b2, type: 3}
+  display: {fileID: 1986898093}
+  numParticles: 300
+  gravity: {x: 0, y: -2, z: 0}
+  collisionDamping: 0.8
+  smoothingRadius: 1.03
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0

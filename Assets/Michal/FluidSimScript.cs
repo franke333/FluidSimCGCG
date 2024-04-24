@@ -22,6 +22,7 @@ public class FluidSimScript : MonoBehaviour
     public float targetDensity;
     public float pressureMultiplier;
     public float mass;
+
     float[] particleProperties;
     float[] densities;
     Vector3[] positions;

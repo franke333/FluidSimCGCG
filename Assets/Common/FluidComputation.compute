@@ -1,0 +1,96 @@
+// Each #kernel tells which function to compile; you can have many kernels
+// indices are corresping to kernels in Simulation.cs
+#pragma kernel UpdatePositions // indexed from 0
+#pragma kernel ResolveCollisions // 1 
+#pragma kernel CalculateDensities // 2
+// ...
+
+static const int NumThreads = 64;
+
+//Buffers
+RWStructuredBuffer<float3> Positions;
+RWStructuredBuffer<float3> Velocities;
+RWStructuredBuffer<float3> Densities;
+
+//Includes
+#include "./ShaderMath.hlsl" // beware. the methods you want to call from here must be in files like this
+
+//Settings
+const float3 boundsSize;
+const float deltaTime;
+const uint numParticles;
+const float3 gravity;
+const float collisionDamping;
+const float smoothingRadius;
+
+[numthreads(NumThreads, 1, 1)]
+void UpdatePositions (uint3 id : SV_DispatchThreadID)
+{
+    uint i = id.x;
+    if (i >= numParticles)
+        return;
+    
+    float3 pos = Positions[i];
+    float3 vel = Velocities[i];
+    
+    vel += gravity * deltaTime;
+    pos += vel * deltaTime;
+    
+    Positions[i] = pos;
+    Velocities[i] = vel;
+}
+
+[numthreads(NumThreads,1,1)]
+void CalculateDensities(uint3 id : SV_DispatchThreadID)
+{
+    uint i = id.x;
+    if (i >= numParticles)
+        return;
+    
+    float3 pos = Positions[i];
+    
+    float density = 0;
+    for (uint j = 0; j < numParticles; j++)
+    {
+        float3 pos2 = Positions[j];
+        float3 vel2 = Velocities[j];
+        
+        float dst = distance(pos, pos2);
+        density += SmoothingKernel(dst, smoothingRadius);
+    }
+    
+    // Store the density in the buffer
+    Densities[i] = density;
+}
+
+[numthreads(NumThreads, 1, 1)]
+void ResolveCollisions(uint3 id : SV_DispatchThreadID)
+{
+    uint i = id.x;
+    if (i >= numParticles)
+        return;
+    
+    float3 pos = Positions[i];
+    float3 vel = Velocities[i];
+    
+    if(abs(pos.x) > boundsSize.x)
+    {
+        pos.x = boundsSize.x * sign(pos.x);
+        vel.x *= -1 * collisionDamping;
+    }
+    if(abs(pos.y) > boundsSize.y)
+    {
+        pos.y = boundsSize.y * sign(pos.y);
+        vel.y *= -1 * collisionDamping;
+    }
+    if(abs(pos.z) > boundsSize.z)
+    {
+        pos.z = boundsSize.z * sign(pos.z);
+        vel.z *= -1 * collisionDamping;
+    }
+    
+    Positions[i] = pos;
+    Velocities[i] = vel;
+}
+
+
