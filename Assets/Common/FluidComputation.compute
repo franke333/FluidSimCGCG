@@ -13,7 +13,7 @@ RWStructuredBuffer<float3> Velocities;
 RWStructuredBuffer<float3> Densities;
 
 //Includes
-#include "./ShaderMath.hlsl" // beware. the methods you want to call from here must be in files like this
+#include "./ShaderMath.hlsl" //methods in this .compute file cant call each other :( (or they may. idk. didnt work for me)
 
 //Settings
 const float3 boundsSize;
