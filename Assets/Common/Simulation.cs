@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using Unity.Mathematics;
 using UnityEngine;
 using Random = UnityEngine.Random;
@@ -17,6 +18,8 @@ public class Simulation : MonoBehaviour
     public Vector3 gravity;
     public float collisionDamping = 0.8f;
     public float smoothingRadius = 1f;
+    public float targetDensity = 2f;
+    public float pressureMultiplier = 0.5f;
 
     // Buffers
     public ComputeBuffer positionBuffer { get; private set; }
@@ -62,6 +65,8 @@ public class Simulation : MonoBehaviour
         compute.SetFloats("gravity", new float[] { gravity.x, gravity.y, gravity.z });
         compute.SetFloat("collisionDamping", collisionDamping);
         compute.SetFloat("smoothingRadius", smoothingRadius);
+        compute.SetFloat("targetDensity", targetDensity);
+        compute.SetFloat("pressureMultiplier", pressureMultiplier);
     }
 
     //do sim here
@@ -91,7 +96,6 @@ public class Simulation : MonoBehaviour
         {
 
             positions[i] = new Vector3(Random.Range(lower.x, upper.x), Random.Range(lower.y, upper.y), Random.Range(lower.z, upper.z));
-            velocities[i] = new Vector3(Random.Range(-1f, 1f), Random.Range(-1f, 1f), Random.Range(-1f, 1f)).normalized;
         }
 
         positionBuffer.SetData(positions);
