@@ -397,9 +397,9 @@ MonoBehaviour:
   compute: {fileID: 7200000, guid: 8fe6f9d9aca80d04db0b4c8bd7f245b2, type: 3}
   display: {fileID: 1986898093}
   numParticles: 300
-  gravity: {x: 0, y: -2, z: 0}
-  collisionDamping: 0.8
-  smoothingRadius: 1.03
+  gravity: {x: 0, y: 0, z: 0}
+  collisionDamping: 1
+  smoothingRadius: 1
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0
