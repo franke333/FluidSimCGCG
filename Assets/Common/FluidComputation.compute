@@ -3,7 +3,7 @@
 #pragma kernel UpdatePositions // indexed from 0
 #pragma kernel ResolveCollisions // 1 
 #pragma kernel CalculateDensities // 2
-// ...
+#pragma kernel CalculatePressureForce // 3
 
 static const int NumThreads = 64;
 
@@ -22,6 +22,8 @@ const uint numParticles;
 const float3 gravity;
 const float collisionDamping;
 const float smoothingRadius;
+const float targetDensity;
+const float pressureMultiplier;
 
 [numthreads(NumThreads, 1, 1)]
 void UpdatePositions (uint3 id : SV_DispatchThreadID)
@@ -56,6 +58,7 @@ void CalculateDensities(uint3 id : SV_DispatchThreadID)
         float3 vel2 = Velocities[j];
         
         float dst = distance(pos, pos2);
+        float influence = SmoothingKernel(dst, smoothingRadius);
         density += SmoothingKernel(dst, smoothingRadius);
     }
     
@@ -93,4 +96,33 @@ void ResolveCollisions(uint3 id : SV_DispatchThreadID)
     Velocities[i] = vel;
 }
 
+[numthreads(NumThreads, 1, 1)]
+void CalculatePressureForce(uint3 id : SV_DispatchThreadID)
+{
+    uint i = id.x;
+    if (i >= numParticles)
+        return;
+    
+    // Calculate pressure
+    float density = Densities[i];
+    float pressure = (density - targetDensity) * pressureMultiplier;
+    float3 pressureForce = 0;
+    
+    float3 pos = Positions[i];
+    
+    for (uint j = 0; j < numParticles; j++)
+    {
+        float3 pos2 = Positions[j];
+        // Calculate pressure force
+        float3 offset = distance(pos, pos2);
+        float dst = sqrt(offset.x * offset.x + offset.y * offset.y + offset.z * offset.z);       
+        float3 dir = dst > 0 ? offset / dst : float3(0, 1, 0);
+        float slope = SmoothingKernel(dst, smoothingRadius);
+        
+        pressureForce += ((density - targetDensity) * pressureMultiplier) * dir * slope;
+    }
+    
+    float3 acceleration = pressureForce / density;
+    Velocities[i] += acceleration * deltaTime;
+}
 

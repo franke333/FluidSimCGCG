@@ -27,6 +27,7 @@ public class Simulation : MonoBehaviour
     const int updatePositionKernel = 0;
     const int resolveCollisionsKernel = 1;
     const int calculateDensityKernel = 2;
+    const int calculatePressureForceKernel = 3;
 
 
     private void Start()
@@ -39,9 +40,9 @@ public class Simulation : MonoBehaviour
         densityBuffer = ComputeHelper.CreateBuffer<float>(numParticles);
 
         // tell each compute shader method (called kernel) which buffers will be used
-        ComputeHelper.SetBuffer(compute, "Positions", positionBuffer, updatePositionKernel, resolveCollisionsKernel, calculateDensityKernel);
-        ComputeHelper.SetBuffer(compute, "Velocities", velocityBuffer, updatePositionKernel, resolveCollisionsKernel);
-        ComputeHelper.SetBuffer(compute, "Densities", densityBuffer, calculateDensityKernel);
+        ComputeHelper.SetBuffer(compute, "Positions", positionBuffer, updatePositionKernel, resolveCollisionsKernel, calculateDensityKernel, calculatePressureForceKernel);
+        ComputeHelper.SetBuffer(compute, "Velocities", velocityBuffer, updatePositionKernel, resolveCollisionsKernel, calculatePressureForceKernel);
+        ComputeHelper.SetBuffer(compute, "Densities", densityBuffer, calculateDensityKernel, calculatePressureForceKernel);
 
         SpawnParticles(numParticles);
         //const deltatime
@@ -68,6 +69,8 @@ public class Simulation : MonoBehaviour
     {
         ComputeHelper.Dispatch(compute, numParticles, updatePositionKernel);
         ComputeHelper.Dispatch(compute, numParticles, resolveCollisionsKernel);
+        ComputeHelper.Dispatch(compute, numParticles, calculateDensityKernel);
+        ComputeHelper.Dispatch(compute, numParticles, calculatePressureForceKernel);
         //get positions from buffer
         positionBuffer.GetData(display.positions);
     }
