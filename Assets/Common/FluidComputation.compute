@@ -58,7 +58,6 @@ void CalculateDensities(uint3 id : SV_DispatchThreadID)
         float3 vel2 = Velocities[j];
         
         float dst = distance(pos, pos2);
-        float influence = SmoothingKernel(dst, smoothingRadius);
         density += SmoothingKernel(dst, smoothingRadius);
     }
     
@@ -113,15 +112,15 @@ void CalculatePressureForce(uint3 id : SV_DispatchThreadID)
     {
         float3 pos2 = Positions[j];
         // Calculate pressure force
-        float3 offset = distance(pos, pos2);
-        float dst = sqrt(offset.x * offset.x + offset.y * offset.y + offset.z * offset.z);
-        float3 dir = dst > 0 ? offset / dst : float3(0, 1, 0);
-        float slope = SmoothingKernel(dst, smoothingRadius);
+        float3 offset = (pos2 - pos);
+        float dst = length(offset);
+        float3 dir = dst > 0.00001f ? offset / dst : float3(0, 1, 0);
+        float slope = DensityDerivative(dst, smoothingRadius);
         
         pressureForce += ((density - targetDensity) * pressureMultiplier) * dir * slope;
     }
     
-    if (density > 0)
+    if (density != 0)
     {
         float3 acceleration = pressureForce / density;
         Velocities[i] += acceleration * deltaTime;

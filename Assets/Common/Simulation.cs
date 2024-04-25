@@ -51,6 +51,11 @@ public class Simulation : MonoBehaviour
         //const deltatime
         Time.fixedDeltaTime = 1 / 60f;
 
+        SetComputeVariables();
+    }
+
+    public void SetComputeVariables()
+    {
         // set all the variables in the compute shader
         // this is done once at the start
         // to see changes, you need to restart the simulation
@@ -94,8 +99,8 @@ public class Simulation : MonoBehaviour
 
         for (int i = 0; i < numParticles; i++)
         {
-
             positions[i] = new Vector3(Random.Range(lower.x, upper.x), Random.Range(lower.y, upper.y), Random.Range(lower.z, upper.z));
+            //velocities[i] = new Vector3(Random.Range(-1f, 1f), Random.Range(-1f, 1f), Random.Range(-1f, 1f)).normalized * 0.25f;
         }
 
         positionBuffer.SetData(positions);
