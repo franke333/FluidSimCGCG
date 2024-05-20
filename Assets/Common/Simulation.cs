@@ -26,12 +26,15 @@ public class Simulation : MonoBehaviour
     public ComputeBuffer velocityBuffer { get; private set; }
     public ComputeBuffer densityBuffer { get; private set; }
 
+    //public ComputeBuffer predictedPositionsBuffer;
+
+
     // Kernels (methods in the pragmas at top of compute shader)
     const int updatePositionKernel = 0;
     const int resolveCollisionsKernel = 1;
     const int calculateDensityKernel = 2;
     const int calculatePressureForceKernel = 3;
-
+    //const int predictPositionKernel = 4;
 
     private void Start()
     {
@@ -41,11 +44,14 @@ public class Simulation : MonoBehaviour
         positionBuffer = ComputeHelper.CreateBuffer<Vector3>(numParticles);
         velocityBuffer = ComputeHelper.CreateBuffer<Vector3>(numParticles);
         densityBuffer = ComputeHelper.CreateBuffer<float>(numParticles);
+        //predictedPositionsBuffer = ComputeHelper.CreateBuffer<float3>(numParticles);
+
 
         // tell each compute shader method (called kernel) which buffers will be used
         ComputeHelper.SetBuffer(compute, "Positions", positionBuffer, updatePositionKernel, resolveCollisionsKernel, calculateDensityKernel, calculatePressureForceKernel);
         ComputeHelper.SetBuffer(compute, "Velocities", velocityBuffer, updatePositionKernel, resolveCollisionsKernel, calculatePressureForceKernel);
         ComputeHelper.SetBuffer(compute, "Densities", densityBuffer, calculateDensityKernel, calculatePressureForceKernel);
+        //ComputeHelper.SetBuffer(compute, "PredictedPositions", predictedPositionsBuffer, calculateDensityKernel, calculatePressureForceKernel, updatePositionKernel);
 
         SpawnParticles(numParticles);
         //const deltatime
@@ -72,6 +78,9 @@ public class Simulation : MonoBehaviour
         compute.SetFloat("smoothingRadius", smoothingRadius);
         compute.SetFloat("targetDensity", targetDensity);
         compute.SetFloat("pressureMultiplier", pressureMultiplier);
+
+        compute.SetMatrix("localToWorld", transform.localToWorldMatrix);
+        compute.SetMatrix("worldToLocal", transform.worldToLocalMatrix);
     }
 
     //do sim here

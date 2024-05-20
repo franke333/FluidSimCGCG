@@ -12,6 +12,8 @@ RWStructuredBuffer<float3> Positions;
 RWStructuredBuffer<float3> Velocities;
 RWStructuredBuffer<float> Densities;
 
+RWStructuredBuffer<float3> PredictedPositions;
+
 //Includes
 #include "./ShaderMath.hlsl" //methods in this .compute file cant call each other :( (or they may. idk. didnt work for me)
 
@@ -25,22 +27,8 @@ const float smoothingRadius;
 const float targetDensity;
 const float pressureMultiplier;
 
-[numthreads(NumThreads, 1, 1)]
-void UpdatePositions (uint3 id : SV_DispatchThreadID)
-{
-    uint i = id.x;
-    if (i >= numParticles)
-        return;
-    
-    float3 pos = Positions[i];
-    float3 vel = Velocities[i];
-    
-    vel += gravity * deltaTime;
-    pos += vel * deltaTime;
-    
-    Positions[i] = pos;
-    Velocities[i] = vel;
-}
+const float4x4 localToWorld;
+const float4x4 worldToLocal;
 
 [numthreads(NumThreads,1,1)]
 void CalculateDensities(uint3 id : SV_DispatchThreadID)
@@ -58,7 +46,7 @@ void CalculateDensities(uint3 id : SV_DispatchThreadID)
         float3 vel2 = Velocities[j];
         
         float dst = distance(pos, pos2);
-        density += SmoothingKernel(dst, smoothingRadius);
+        density += SmoothingKernel(dst, smoothingRadius); 
     }
     
     // Store the density in the buffer
@@ -72,6 +60,7 @@ void ResolveCollisions(uint3 id : SV_DispatchThreadID)
     if (i >= numParticles)
         return;
     
+    /*   
     float3 pos = Positions[i];
     float3 vel = Velocities[i];
     
@@ -93,6 +82,67 @@ void ResolveCollisions(uint3 id : SV_DispatchThreadID)
     
     Positions[i] = pos;
     Velocities[i] = vel;
+    */
+    
+    float3 posLocal = mul(worldToLocal, float4(Positions[i], 1)).xyz;
+    float3 velocityLocal = mul(worldToLocal, float4(Velocities[i], 0)).xyz;
+	
+    const float3 borderDist = 0.5 - abs(posLocal);
+    const float3 h = 0.5;
+	// Resolve collisions
+    if (borderDist.x <= 0)
+    {
+        posLocal.x = h.x * sign(posLocal.x);
+        velocityLocal.x *= -1 * collisionDamping;
+    }
+    if (borderDist.y <= 0)
+    {
+        posLocal.y = h.y * sign(posLocal.y);
+        velocityLocal.y *= -1 * collisionDamping;
+    }
+    if (borderDist.z <= 0)
+    {
+        posLocal.z = h.z * sign(posLocal.z);
+        velocityLocal.z *= -1 * collisionDamping;
+    }
+
+    Positions[i] = mul(localToWorld, float4(posLocal, 1)).xyz;
+    Velocities[i] = mul(localToWorld, float4(velocityLocal, 0)).xyz;
+    
+}
+
+[numthreads(NumThreads, 1, 1)]
+void UpdatePositions(uint3 id : SV_DispatchThreadID)
+{
+    uint i = id.x;
+    if (i >= numParticles)
+        return;
+    /*
+    float3 pos = Positions[i];
+    float3 vel = Velocities[i];
+    
+    vel += gravity * deltaTime;
+    pos += vel * deltaTime;
+    
+    Positions[i] = pos;
+    Velocities[i] = vel;
+    */
+
+    Positions[id.x] += Velocities[id.x] * deltaTime;
+    ResolveCollisions(id.x);
+}
+
+float PressureFromDensity(float density)
+{
+    return (density - targetDensity) * pressureMultiplier;
+}
+
+float CalculateSharedPressure(float density1, float density2)
+{
+    float pressure1 = PressureFromDensity(density1);
+    float pressure2 = PressureFromDensity(density2);
+    return (pressure1 + pressure2) / 2;
+    
 }
 
 [numthreads(NumThreads, 1, 1)]
@@ -116,8 +166,8 @@ void CalculatePressureForce(uint3 id : SV_DispatchThreadID)
         float dst = length(offset);
         float3 dir = dst > 0.00001f ? offset / dst : float3(0, 1, 0);
         float slope = DensityDerivative(dst, smoothingRadius);
-        
-        pressureForce += ((density - targetDensity) * pressureMultiplier) * dir * slope;
+        float sharedPressure = CalculateSharedPressure(density, Densities[i]);
+        pressureForce += sharedPressure * dir * slope;
     }
     
     if (density != 0)
@@ -127,3 +177,17 @@ void CalculatePressureForce(uint3 id : SV_DispatchThreadID)
     }
 }
 
+/*
+[numthreads(NumThreads, 1, 1)]
+void ExternalForces(uint3 id : SV_DispatchThreadID)
+{
+    uint i = id.x;
+    if (i >= numParticles)
+        return;
+
+	// gravity
+    Velocities[id.x] += float3(0, gravity, 0) * deltaTime;
+
+	// Predict
+    PredictedPositions[id.x] = Positions[id.x] + Velocities[id.x] * 1 / 120.0;
+}*/
