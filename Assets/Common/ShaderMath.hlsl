@@ -9,10 +9,9 @@ float SpikyKernelPow2(float dst, float radius)
     {
         //float volume = PI * pow(radius, 8) / 4;
         
-        float scale = 15 / (2 * PI * pow(radius, 5));
-        //float v = radius*radius - dst*dst;
-        float v = radius - dst;
-        return v * v * scale;
+        float scale = 315.0 / (64.0 * PI * pow(abs(radius), 9));
+        float v = radius * radius - dst * dst;
+        return v * v * v * scale;
     }
     return 0;
 }

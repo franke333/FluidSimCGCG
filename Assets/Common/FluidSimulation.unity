@@ -424,7 +424,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   positions: []
-  scale: 0.15
+  scale: 0.1
   mesh: {fileID: 10207, guid: 0000000000000000e000000000000000, type: 0}
   material: {fileID: 2100000, guid: 15fa3a25d8239e9439671a77436649fb, type: 2}
 --- !u!114 &1986898094
@@ -443,10 +443,10 @@ MonoBehaviour:
   display: {fileID: 1986898093}
   numParticles: 1000
   gravity: {x: 0, y: 0, z: 0}
-  collisionDamping: 11.99
-  smoothingRadius: 2.5
-  targetDensity: 2
-  pressureMultiplier: 5
+  collisionDamping: 0.95
+  smoothingRadius: 1.5
+  targetDensity: 1.5
+  pressureMultiplier: 0.5
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0

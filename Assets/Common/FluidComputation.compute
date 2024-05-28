@@ -1,9 +1,9 @@
 // Each #kernel tells which function to compile; you can have many kernels
 // indices are corresping to kernels in Simulation.cs
 #pragma kernel UpdatePositions // indexed from 0
-#pragma kernel ResolveCollisions // 1 
-#pragma kernel CalculateDensities // 2
-#pragma kernel CalculatePressureForce // 3
+#pragma kernel CalculateDensities // 1
+#pragma kernel CalculatePressureForce // 2
+#pragma kernel ExternalForces // 3
 
 static const int NumThreads = 64;
 
@@ -11,7 +11,6 @@ static const int NumThreads = 64;
 RWStructuredBuffer<float3> Positions;
 RWStructuredBuffer<float3> Velocities;
 RWStructuredBuffer<float> Densities;
-
 RWStructuredBuffer<float3> PredictedPositions;
 
 //Includes
@@ -21,7 +20,7 @@ RWStructuredBuffer<float3> PredictedPositions;
 const float3 boundsSize;
 const float deltaTime;
 const uint numParticles;
-const float3 gravity;
+const float gravity;
 const float collisionDamping;
 const float smoothingRadius;
 const float targetDensity;
@@ -43,9 +42,9 @@ void CalculateDensities(uint3 id : SV_DispatchThreadID)
     for (uint j = 0; j < numParticles; j++)
     {
         float3 pos2 = Positions[j];
-        float3 vel2 = Velocities[j];
+        float3 offset = pos - pos2;
         
-        float dst = distance(pos, pos2);
+        float dst = dot(offset, offset);
         density += SmoothingKernel(dst, smoothingRadius); 
     }
     
@@ -56,58 +55,28 @@ void CalculateDensities(uint3 id : SV_DispatchThreadID)
 [numthreads(NumThreads, 1, 1)]
 void ResolveCollisions(uint3 id : SV_DispatchThreadID)
 {
-    uint i = id.x;
-    if (i >= numParticles)
-        return;
+    float3 pos = Positions[id.x];
+    float3 vel = Velocities[id.x];
     
-    /*   
-    float3 pos = Positions[i];
-    float3 vel = Velocities[i];
-    
-    if(abs(pos.x) > boundsSize.x)
+	// Resolve collisions
+    if (abs(pos.x) >= boundsSize.x)
     {
         pos.x = boundsSize.x * sign(pos.x);
         vel.x *= -1 * collisionDamping;
     }
-    if(abs(pos.y) > boundsSize.y)
+    if (abs(pos.y) >= boundsSize.y)
     {
         pos.y = boundsSize.y * sign(pos.y);
         vel.y *= -1 * collisionDamping;
     }
-    if(abs(pos.z) > boundsSize.z)
+    if (abs(pos.z) >= boundsSize.z)
     {
         pos.z = boundsSize.z * sign(pos.z);
         vel.z *= -1 * collisionDamping;
     }
-    
-    Positions[i] = pos;
-    Velocities[i] = vel;
-    */
-    
-    float3 posLocal = mul(worldToLocal, float4(Positions[i], 1)).xyz;
-    float3 velocityLocal = mul(worldToLocal, float4(Velocities[i], 0)).xyz;
-	
-    const float3 borderDist = 0.5 - abs(posLocal);
-    const float3 h = 0.5;
-	// Resolve collisions
-    if (borderDist.x <= 0)
-    {
-        posLocal.x = h.x * sign(posLocal.x);
-        velocityLocal.x *= -1 * collisionDamping;
-    }
-    if (borderDist.y <= 0)
-    {
-        posLocal.y = h.y * sign(posLocal.y);
-        velocityLocal.y *= -1 * collisionDamping;
-    }
-    if (borderDist.z <= 0)
-    {
-        posLocal.z = h.z * sign(posLocal.z);
-        velocityLocal.z *= -1 * collisionDamping;
-    }
 
-    Positions[i] = mul(localToWorld, float4(posLocal, 1)).xyz;
-    Velocities[i] = mul(localToWorld, float4(velocityLocal, 0)).xyz;
+    Positions[id.x] = pos;
+    Velocities[id.x] = vel;
     
 }
 
@@ -117,19 +86,20 @@ void UpdatePositions(uint3 id : SV_DispatchThreadID)
     uint i = id.x;
     if (i >= numParticles)
         return;
-    /*
-    float3 pos = Positions[i];
-    float3 vel = Velocities[i];
     
-    vel += gravity * deltaTime;
-    pos += vel * deltaTime;
+    //float3 pos = Positions[i] * deltaTime;
+    //float3 vel = Velocities[id];
     
-    Positions[i] = pos;
-    Velocities[i] = vel;
-    */
+    //vel += gravity * deltaTime;
+    //pos += vel * deltaTime;
+    
+    //Positions[id] = pos;
+    //Velocities[id] = vel;
+    
 
-    Positions[id.x] += Velocities[id.x] * deltaTime;
-    ResolveCollisions(id.x);
+    
+    Positions[i] += Velocities[i] * deltaTime;
+    ResolveCollisions(i);
 }
 
 float PressureFromDensity(float density)
@@ -148,36 +118,28 @@ float CalculateSharedPressure(float density1, float density2)
 [numthreads(NumThreads, 1, 1)]
 void CalculatePressureForce(uint3 id : SV_DispatchThreadID)
 {
-    uint i = id.x;
-    if (i >= numParticles)
-        return;
-    
     // Calculate pressure
-    float density = Densities[i];
     float3 pressureForce = 0;
     
-    float3 pos = Positions[i];
+    float3 pos = Positions[id.x];
     
     for (uint j = 0; j < numParticles; j++)
     {
         float3 pos2 = Positions[j];
         // Calculate pressure force
-        float3 offset = (pos2 - pos);
-        float dst = length(offset);
+        float3 offset = pos2 - pos;
+        float dst = dot(offset, offset);
         float3 dir = dst > 0.00001f ? offset / dst : float3(0, 1, 0);
         float slope = DensityDerivative(dst, smoothingRadius);
-        float sharedPressure = CalculateSharedPressure(density, Densities[i]);
-        pressureForce += sharedPressure * dir * slope;
+        float density = Densities[j];
+        float sharedPressure = CalculateSharedPressure(density, Densities[id.x]);
+        pressureForce += sharedPressure * dir * slope * 1 / density;
     }
     
-    if (density != 0)
-    {
-        float3 acceleration = pressureForce / density;
-        Velocities[i] = acceleration * deltaTime;
-    }
+    Velocities[id.x] += pressureForce * deltaTime;
 }
 
-/*
+
 [numthreads(NumThreads, 1, 1)]
 void ExternalForces(uint3 id : SV_DispatchThreadID)
 {
@@ -186,8 +148,8 @@ void ExternalForces(uint3 id : SV_DispatchThreadID)
         return;
 
 	// gravity
-    Velocities[id.x] += float3(0, gravity, 0) * deltaTime;
+    // Velocities[i] += gravity * deltaTime;
 
 	// Predict
-    PredictedPositions[id.x] = Positions[id.x] + Velocities[id.x] * 1 / 120.0;
-}*/
+    PredictedPositions[i] = Positions[i] + Velocities[i] * 1 / 120.0;
+}
