@@ -12,6 +12,7 @@ RWStructuredBuffer<float3> Positions;
 RWStructuredBuffer<float3> Velocities;
 RWStructuredBuffer<float> Densities;
 RWStructuredBuffer<float3> PredictedPositions;
+RWStructuredBuffer<float4> SphereObstacles;
 
 //Includes
 #include "./ShaderMath.hlsl" //methods in this .compute file cant call each other :( (or they may. idk. didnt work for me)
@@ -25,6 +26,7 @@ const float collisionDamping;
 const float smoothingRadius;
 const float targetDensity;
 const float pressureMultiplier;
+const float sphereCount;
 
 const float4x4 localToWorld;
 const float4x4 worldToLocal;
@@ -36,15 +38,21 @@ void CalculateDensities(uint3 id : SV_DispatchThreadID)
     if (i >= numParticles)
         return;
     
-    float3 pos = Positions[i];
+    float3 pos = PredictedPositions[i];
+    float smoothing2 = smoothingRadius * smoothingRadius;
     
     float density = 0;
     for (uint j = 0; j < numParticles; j++)
     {
-        float3 pos2 = Positions[j];
-        float3 offset = pos - pos2;
+        if(i == j)
+            continue;
+        float3 pos2 = PredictedPositions[j];
+        float3 offset = pos2 - pos;
         
         float dst = dot(offset, offset);
+        if(dst > smoothing2)
+            continue;
+        dst = sqrt(dst);
         density += SmoothingKernel(dst, smoothingRadius); 
     }
     
@@ -52,8 +60,7 @@ void CalculateDensities(uint3 id : SV_DispatchThreadID)
     Densities[i] = density;
 }
 
-[numthreads(NumThreads, 1, 1)]
-void ResolveCollisions(uint3 id : SV_DispatchThreadID)
+void ResolveCollisions(uint3 id)
 {
     float3 pos = Positions[id.x];
     float3 vel = Velocities[id.x];
@@ -99,7 +106,7 @@ void UpdatePositions(uint3 id : SV_DispatchThreadID)
 
     
     Positions[i] += Velocities[i] * deltaTime;
-    ResolveCollisions(i);
+    ResolveCollisions(id);
 }
 
 float PressureFromDensity(float density)
@@ -121,22 +128,42 @@ void CalculatePressureForce(uint3 id : SV_DispatchThreadID)
     // Calculate pressure
     float3 pressureForce = 0;
     
-    float3 pos = Positions[id.x];
-    
+    float3 pos = PredictedPositions[id.x];
+    float smoothing2 = smoothingRadius * smoothingRadius;
+    float density = Densities[id.x];
     for (uint j = 0; j < numParticles; j++)
     {
-        float3 pos2 = Positions[j];
+        if (id.x == j)
+            continue;
+        float3 pos2 = PredictedPositions[j];
         // Calculate pressure force
         float3 offset = pos2 - pos;
         float dst = dot(offset, offset);
-        float3 dir = dst > 0.00001f ? offset / dst : float3(0, 1, 0);
+        if (dst > smoothing2)
+            continue;
+        dst = sqrt(dst);
+        float3 dir = dst > 0 ? offset / dst : float3(0, 1, 0);
         float slope = DensityDerivative(dst, smoothingRadius);
-        float density = Densities[j];
-        float sharedPressure = CalculateSharedPressure(density, Densities[id.x]);
-        pressureForce += sharedPressure * dir * slope * 1 / density;
+        float densityNeigh = Densities[j];
+        float sharedPressure = CalculateSharedPressure(density, densityNeigh);
+        pressureForce += sharedPressure * dir * slope / densityNeigh;
     }
     
-    Velocities[id.x] += pressureForce * deltaTime;
+    Velocities[id.x] += pressureForce * deltaTime / density;
+}
+
+
+float3 PushFromSphere(float3 particlePos, float3 sphereCenter, float sphereRadius, float pushForce)
+{
+    float3 pos = particlePos;
+    float3 offset = pos - sphereCenter;
+    float dst = dot(offset, offset);
+    if (dst > sphereRadius * sphereRadius)
+        return float3(0, 0, 0);
+    dst = sqrt(dst);
+    float3 dir = dst > 0 ? offset / dst : float3(0, 1, 0);
+    return dir * pushForce;
+
 }
 
 
@@ -148,8 +175,17 @@ void ExternalForces(uint3 id : SV_DispatchThreadID)
         return;
 
 	// gravity
-    // Velocities[i] += gravity * deltaTime;
+    Velocities[i] += gravity * deltaTime;
+    
+    // sphere obstacles
+    for (uint j = 0; j < sphereCount; j++)
+    {
+        float4 sphere = SphereObstacles[j];
+        float3 center = sphere.xyz;
+        float radius = sphere.w;
+        float3 push = PushFromSphere(PredictedPositions[i], center, radius, 100);
+        Velocities[i] += push * deltaTime;
+    }
 
-	// Predict
-    PredictedPositions[i] = Positions[i] + Velocities[i] * 1 / 120.0;
+    PredictedPositions[i] = Positions[i] + Velocities[i] * 1/120.0;
 }

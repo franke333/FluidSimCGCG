@@ -1,7 +1,15 @@
 ﻿static const float PI = 3.1415926;
 
-//TODO this is wrong.. its for 2d case. but we are in 3d
-
+float SpikyKernelPow3(float dst, float radius)
+{
+    if (dst < radius)
+    {
+        float scale = 15 / (PI * pow(radius, 6));
+        float v = radius - dst;
+        return v * v * v * scale;
+    }
+    return 0;
+}
 
 float SpikyKernelPow2(float dst, float radius)
 {
@@ -9,9 +17,9 @@ float SpikyKernelPow2(float dst, float radius)
     {
         //float volume = PI * pow(radius, 8) / 4;
         
-        float scale = 315.0 / (64.0 * PI * pow(abs(radius), 9));
-        float v = radius * radius - dst * dst;
-        return v * v * v * scale;
+        float scale = 15.0 / (2.0 * PI * pow(radius, 5));
+        float v = radius  - dst;
+        return v * v * scale;
     }
     return 0;
 }
