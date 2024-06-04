@@ -31,10 +31,11 @@ public class DisplayParticles : MonoBehaviour
     // Update is called once per frame
     void LateUpdate()
     {
+        Quaternion rotation = Quaternion.LookRotation(-Camera.main.transform.forward, Camera.main.transform.up);
         //TODO dont use LINQ lol... too slow
         if(positions.Length > 250)
             for (int i = 0; i <= positions.Length / BATCH_SIZE; i++)
-                Graphics.DrawMeshInstanced(mesh, 0, material, positions.Skip(BATCH_SIZE * i).Take(BATCH_SIZE).Select(p => Matrix4x4.TRS(p + transform.position, Quaternion.identity, Vector3.one * scale)).ToArray());
+                Graphics.DrawMeshInstanced(mesh, 0, material, positions.Skip(BATCH_SIZE * i).Take(BATCH_SIZE).Select(p => Matrix4x4.TRS(p + transform.position, rotation, Vector3.one * scale)).ToArray());
         else
         {
             MaterialPropertyBlock props = new MaterialPropertyBlock();
