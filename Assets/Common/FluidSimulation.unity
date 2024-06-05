@@ -1110,13 +1110,13 @@ MonoBehaviour:
   targetDensity: 7.4
   pressureMultiplier: 300
   sphereObstacles:
+  - {fileID: 1607880992}
   - {fileID: 1546545463}
   - {fileID: 2128991884}
   - {fileID: 1619913291}
-  - {fileID: 1607880992}
   - {fileID: 1614643387}
-  - {fileID: 138593936}
   - {fileID: 679668949}
+  - {fileID: 138593936}
   - {fileID: 2119709061}
 --- !u!1 &2119709061
 GameObject:
