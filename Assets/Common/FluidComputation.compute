@@ -254,5 +254,11 @@ void ExternalForces(uint3 id : SV_DispatchThreadID)
         Velocities[i] = normalize(Velocities[i]) * 100;
     }
     
-    PredictedPositions[i] = Positions[i] + Velocities[i] * 1/120.0;
+    if (isnan(length(Velocities[i])) || isnan(length(Positions[i])))
+    {
+        Velocities[i] = float3(0,0,0);
+        Positions[i] = float3(0,0,0);
+    }
+    
+        PredictedPositions[i] = Positions[i] + Velocities[i] * 1 / 120.0;
 }
