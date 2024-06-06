@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Linq;
 using Unity.Mathematics;
 using UnityEngine;
@@ -18,10 +19,15 @@ public class Simulation : MonoBehaviour
     public float smoothingRadius = 1f;
     public float targetDensity = 2f;
     public float pressureMultiplier = 0.5f;
+
     public GameObject[] sphereObstacles;
+    public GameObject[] boxObstacles;
 
     private int closeSpheres = 0;
     private Vector4[] sphereData;
+
+    private int closeBoxes = 0;
+    private float2x3[] boxData;
 
     [SerializeField]
     private int maxParticles;
@@ -46,7 +52,7 @@ public class Simulation : MonoBehaviour
     public ComputeBuffer predictedPositionsBuffer { get; private set; }
 
     public ComputeBuffer externalSpheres { get; private set; }
-
+    public ComputeBuffer externalBoxes { get; private set; }
 
     // Kernels (methods in the pragmas at top of compute shader)
     const int updatePositionKernel = 0;
@@ -68,13 +74,15 @@ public class Simulation : MonoBehaviour
         predictedPositionsBuffer = ComputeHelper.CreateBuffer<float3>(maxParticles);
         externalSpheres = ComputeHelper.CreateBuffer<float4>(sphereObstacles.Length);
         sphereData = new Vector4[sphereObstacles.Length];
-
+        externalBoxes = ComputeHelper.CreateBuffer<float2x3>(boxObstacles.Length*6);
+        boxData = new float2x3[boxObstacles.Length];
         // tell each compute shader method (called kernel) which buffers will be used
         ComputeHelper.SetBuffer(compute, "Positions", positionBuffer, updatePositionKernel, calculateDensityKernel, calculatePressureForceKernel, externalForcesKernel);
         ComputeHelper.SetBuffer(compute, "Velocities", velocityBuffer, updatePositionKernel, calculatePressureForceKernel, externalForcesKernel);
         ComputeHelper.SetBuffer(compute, "Densities", densityBuffer, calculateDensityKernel, calculatePressureForceKernel);
         ComputeHelper.SetBuffer(compute, "PredictedPositions", predictedPositionsBuffer, externalForcesKernel, updatePositionKernel, calculateDensityKernel, calculatePressureForceKernel);
         ComputeHelper.SetBuffer(compute, "SphereObstacles", externalSpheres, externalForcesKernel);
+        ComputeHelper.SetBuffer(compute, "BoxObstacles", externalBoxes, externalForcesKernel);
 
         SpawnParticles(numParticles);
         //const deltatime
@@ -132,6 +140,13 @@ public class Simulation : MonoBehaviour
         if(closeSpheres > 0)
             externalSpheres.SetData(sphereData);
         compute.SetInt("sphereCount", closeSpheres);
+
+        CheckCLosestBoxes();
+        if(closeBoxes > 0)
+            externalBoxes.SetData(boxData);
+        compute.SetInt("boxCount", closeBoxes);
+
+
         lastFrameParticles = numParticles;
     }
 
@@ -160,16 +175,47 @@ public class Simulation : MonoBehaviour
     {
         sphereObstacles = sphereObstacles.OrderBy(x => Vector3.Distance(x.transform.position, transform.position)).ToArray();
 
-        float minDistance = Mathf.Min(transform.localScale.x, transform.localScale.y, transform.localScale.z);
+        float maxDistance = transform.localScale.magnitude * 2;
         closeSpheres = 0;
         foreach (var sphere in sphereObstacles)
         {
             
-            float distance = Vector3.Distance(sphere.transform.position, transform.position) - sphere.transform.localScale.x - minDistance;
+            float distance = Vector3.Distance(sphere.transform.position, transform.position) - sphere.transform.localScale.x - maxDistance;
             if (distance > 0)
                 break;
-            sphereData[closeSpheres] = new Vector4(sphere.transform.position.x, sphere.transform.position.y, sphere.transform.position.z, sphere.transform.localScale.x/2);
+            Vector3 spherePos = sphere.transform.position - transform.position;
+            sphereData[closeSpheres] = new Vector4(spherePos.x, spherePos.y, spherePos.z, sphere.transform.localScale.x/2);
             closeSpheres++;
+        }
+    }
+
+    private void CheckCLosestBoxes()
+    {
+        List<GameObject> boxesInRange = new List<GameObject>();
+
+        float BBSimRadius = transform.localScale.magnitude * 2;
+
+        foreach (var box in boxObstacles)
+        {
+            if(Vector3.Distance(box.transform.position, transform.position) - BBSimRadius - box.transform.localScale.magnitude <= 0)
+            {
+                boxesInRange.Add(box);
+            }
+        }
+
+        closeBoxes = boxesInRange.Count;
+
+        for (int i = 0; i < closeBoxes; i++)
+        {
+            boxData[i].c0 = new float2(boxesInRange[i].transform.position.x - transform.position.x, boxesInRange[i].transform.localScale.x);
+            boxData[i].c1 = new float2(boxesInRange[i].transform.position.y - transform.position.y, boxesInRange[i].transform.localScale.y);
+            boxData[i].c2 = new float2(boxesInRange[i].transform.position.z - transform.position.z, boxesInRange[i].transform.localScale.z);
+        }
+
+        Debug.Log("Close boxes: " + closeBoxes);
+        if(closeBoxes == 1)
+        {
+            Debug.Log("Box 0: " + boxData[0].c0 + " " + boxData[0].c1 + " " + boxData[0].c2);
         }
     }
 

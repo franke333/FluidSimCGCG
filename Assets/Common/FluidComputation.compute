@@ -28,6 +28,7 @@ const float smoothingRadius;
 const float targetDensity;
 const float pressureMultiplier;
 const uint sphereCount;
+const uint boxCount;
 
 const float4x4 localToWorld;
 const float4x4 worldToLocal;
@@ -181,30 +182,35 @@ float3 PushFromSphere(float3 particlePos, float3 sphereCenter, float sphereRadiu
 
 }
 
-float3 PushFromBox(float3 particlePos, float3 boxCenter, float3 boxSize, float pushForce)
+float2x3 PushFromBox(float3 particlePos, float3 particleVel, float3 boxCenter, float3 boxSize)
 {
     float3 pos = particlePos;
     float3 offset = pos - boxCenter;
     float3 halfSize = boxSize / 2;
-    float3 push = float3(0, 0, 0);
-    if (abs(offset.x) < halfSize.x)
+    //if particle is inside the box, no need to push
+    if (abs(offset.x) > halfSize.x || abs(offset.y) > halfSize.y || abs(offset.z) > halfSize.z)
+        return float2x3(particlePos,particleVel);
+    float3 newPos = particlePos;
+    // push particles inside the box outside
+    //choose closest face to push
+    float3 dstToFace = halfSize - abs(offset);
+    if (dstToFace.x < dstToFace.y && dstToFace.x < dstToFace.z)
     {
-        float sign = offset.x > 0 ? 1 : -1;
-        push.x += sign * (abs(offset.x) - halfSize.x);
+        newPos.x = boxCenter.x + halfSize.x * sign(offset.x);
+        particleVel.x *= -1 * collisionDamping;
     }
-    if (abs(offset.y) < halfSize.y)
+    else if (dstToFace.y < dstToFace.z)
     {
-        float sign = offset.y > 0 ? 1 : -1;
-        push.y += sign * (abs(offset.y) - halfSize.y);
+        newPos.y = boxCenter.y + halfSize.y * sign(offset.y);
+        particleVel.y *= -1 * collisionDamping;
     }
-    if (abs(offset.z) < halfSize.z)
+    else
     {
-        float sign = offset.z > 0 ? 1 : -1;
-        push.z += sign * (abs(offset.z) - halfSize.z);
+        newPos.z = boxCenter.z + halfSize.z * sign(offset.z);
+        particleVel.z *= -1 * collisionDamping;
     }
-    if(dot(push, push) > 0)
-        push = normalize(push) * pushForce;
-    return push;
+    return float2x3(newPos, particleVel);
+    
 }
 
 
@@ -224,16 +230,28 @@ void ExternalForces(uint3 id : SV_DispatchThreadID)
         float4 sphere = SphereObstacles[j];
         float3 center = sphere.xyz;
         float radius = sphere.w;
-        float3 push = PushFromSphere(PredictedPositions[i], center, radius, 20);
+        float3 push = PushFromSphere(Positions[i], center, radius,20);
         Velocities[i] += push * deltaTime;
     }
+    
+    // box obstacles
+    for (uint k = 0; k < boxCount; k++)
+    {
+        float2x3 box = BoxObstacles[k];
+        float3 center = box._11_12_13;
+        float3 size = box._21_22_23;
+        float2x3 newPosVel = PushFromBox(PredictedPositions[i], Velocities[i], center, size);
+        Velocities[i] = newPosVel._21_22_23;
+        Positions[i] = newPosVel._11_12_13;
+    }
+    
 
     // bound velocity
     
     float magnitude = length(Velocities[i]);
-    if (magnitude > 10)
+    if (magnitude > 100)
     {
-        Velocities[i] = normalize(Velocities[i]) * 10;
+        Velocities[i] = normalize(Velocities[i]) * 100;
     }
     
     PredictedPositions[i] = Positions[i] + Velocities[i] * 1/120.0;
