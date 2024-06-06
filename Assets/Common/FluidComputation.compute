@@ -58,14 +58,14 @@ void CalculateDensities(uint3 id : SV_DispatchThreadID)
     {
         if(i == j)
             continue;
-        float3 pos2 = PredictedPositions[j];
-        float3 offset = pos2 - pos;
+        float3 posOther = PredictedPositions[j];
+        float3 offset = posOther - pos;
         
-        float dst = dot(offset, offset);
-        if(dst > smoothing2)
+        float dst2 = dot(offset, offset);
+        if(dst2 > smoothing2)
             continue;
-        dst = sqrt(dst);
-        density += SmoothingKernel(dst, smoothingRadius); 
+        
+        density += SmoothingKernel(sqrt(dst2), smoothingRadius);
     }
     
     // Store the density in the buffer
