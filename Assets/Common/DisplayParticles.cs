@@ -44,7 +44,7 @@ public class DisplayParticles : MonoBehaviour
                     //look at the camera
                     Quaternion rotation = Quaternion.LookRotation(Camera.main.transform.position - (positions[j] + transform.position), Vector3.up);
                     //rotate so up is forward
-                    rotation *= Quaternion.Euler(90, 0, 0);
+                    //rotation *= Quaternion.Euler(90, 0, 0);
                     matrices[j] = Matrix4x4.TRS(positions[j + BATCH_SIZE * i] + transform.position, rotation, Vector3.one * scale);
                 }
                 Graphics.DrawMeshInstanced(mesh, 0, material, matrices, Mathf.Min(BATCH_SIZE, numParticles - BATCH_SIZE*i));

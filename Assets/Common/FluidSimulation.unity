@@ -918,7 +918,7 @@ MeshRenderer:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1655934176}
-  m_Enabled: 1
+  m_Enabled: 0
   m_CastShadows: 1
   m_ReceiveShadows: 1
   m_DynamicOccludee: 1
@@ -970,8 +970,8 @@ Transform:
   m_GameObject: {fileID: 1655934176}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 1.1594774, y: 3.486739, z: -19.61}
-  m_LocalScale: {x: 3.2333, y: 3.2333, z: 3.2333}
+  m_LocalPosition: {x: 38.19, y: -5.21, z: -2.65}
+  m_LocalScale: {x: 2.966997, y: 30.854477, z: 31.364258}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 0}
@@ -1171,8 +1171,8 @@ Transform:
   m_GameObject: {fileID: 1986898090}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 7.999183, y: 7.5805745, z: 8.367488}
+  m_LocalPosition: {x: 30.39, y: 9.77, z: 10.62}
+  m_LocalScale: {x: 7.7298636, y: 5.30246, z: 5.8528905}
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 1943518271}
@@ -1249,13 +1249,6 @@ MonoBehaviour:
   pressureMultiplier: 1.94
   sphereObstacles:
   - {fileID: 1607880992}
-  - {fileID: 1546545463}
-  - {fileID: 2128991884}
-  - {fileID: 1619913291}
-  - {fileID: 1614643387}
-  - {fileID: 679668949}
-  - {fileID: 138593936}
-  - {fileID: 2119709061}
   boxObstacles:
   - {fileID: 1655934176}
   maxParticles: 3000

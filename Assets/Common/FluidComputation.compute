@@ -240,7 +240,7 @@ void ExternalForces(uint3 id : SV_DispatchThreadID)
         float2x3 box = BoxObstacles[k];
         float3 center = box._11_12_13;
         float3 size = box._21_22_23;
-        float2x3 newPosVel = PushFromBox(PredictedPositions[i], Velocities[i], center, size);
+        float2x3 newPosVel = PushFromBox(Positions[i], Velocities[i], center, size);
         Velocities[i] = newPosVel._21_22_23;
         Positions[i] = newPosVel._11_12_13;
     }

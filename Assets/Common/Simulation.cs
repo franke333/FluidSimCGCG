@@ -72,9 +72,9 @@ public class Simulation : MonoBehaviour
         velocityBuffer = ComputeHelper.CreateBuffer<Vector3>(maxParticles);
         densityBuffer = ComputeHelper.CreateBuffer<float>(maxParticles);
         predictedPositionsBuffer = ComputeHelper.CreateBuffer<float3>(maxParticles);
-        externalSpheres = ComputeHelper.CreateBuffer<float4>(sphereObstacles.Length);
+        externalSpheres = ComputeHelper.CreateBuffer<float4>(sphereObstacles.Length + 1);
         sphereData = new Vector4[sphereObstacles.Length];
-        externalBoxes = ComputeHelper.CreateBuffer<float2x3>(boxObstacles.Length*6);
+        externalBoxes = ComputeHelper.CreateBuffer<float2x3>(boxObstacles.Length + 1);
         boxData = new float2x3[boxObstacles.Length];
         // tell each compute shader method (called kernel) which buffers will be used
         ComputeHelper.SetBuffer(compute, "Positions", positionBuffer, updatePositionKernel, calculateDensityKernel, calculatePressureForceKernel, externalForcesKernel);
@@ -301,6 +301,7 @@ public class Simulation : MonoBehaviour
         densityBuffer.Release();
         predictedPositionsBuffer.Release();
         externalSpheres.Release();
+        externalBoxes.Release();
     }
 
     private void OnDrawGizmos()
