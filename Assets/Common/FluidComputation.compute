@@ -13,6 +13,7 @@ RWStructuredBuffer<float3> Velocities;
 RWStructuredBuffer<float> Densities;
 RWStructuredBuffer<float3> PredictedPositions;
 RWStructuredBuffer<float4> SphereObstacles;
+RWStructuredBuffer<float2x3> BoxObstacles;
 
 //Includes
 #include "./ShaderMath.hlsl" //methods in this .compute file cant call each other :( (or they may. idk. didnt work for me)
@@ -21,15 +22,25 @@ RWStructuredBuffer<float4> SphereObstacles;
 const float3 boundsSize;
 const float deltaTime;
 const uint numParticles;
-const float gravity;
+const float3 gravity;
 const float collisionDamping;
 const float smoothingRadius;
 const float targetDensity;
 const float pressureMultiplier;
-const float sphereCount;
+const uint sphereCount;
 
 const float4x4 localToWorld;
 const float4x4 worldToLocal;
+
+float3 RandomDirection(uint seed)
+{
+    float3 dir = float3(0, 0, 0);
+    dir.x = frac(sin(dot(float3(seed, seed, seed), float3(12.9898, 78.233, 151.7182))) * 43758.5453);
+    dir.y = frac(sin(dot(float3(seed, seed, seed), float3(269.5, 183.3, 246.1))) * 43758.5453);
+    dir.z = frac(sin(dot(float3(seed, seed, seed), float3(12.9898, 78.233, 151.7182))) * 43758.5453);
+    return normalize(dir);
+
+}
 
 [numthreads(NumThreads,1,1)]
 void CalculateDensities(uint3 id : SV_DispatchThreadID)
@@ -131,6 +142,8 @@ void CalculatePressureForce(uint3 id : SV_DispatchThreadID)
     float3 pos = PredictedPositions[id.x];
     float smoothing2 = smoothingRadius * smoothingRadius;
     float density = Densities[id.x];
+    if(density < 0.0001)
+        return;
     for (uint j = 0; j < numParticles; j++)
     {
         if (id.x == j)
@@ -142,10 +155,12 @@ void CalculatePressureForce(uint3 id : SV_DispatchThreadID)
         if (dst > smoothing2)
             continue;
         dst = sqrt(dst);
-        float3 dir = dst > 0 ? offset / dst : float3(0, 1, 0);
+        float3 dir = dst > 0.0001 ? offset / dst : RandomDirection(id.x);
         float slope = DensityDerivative(dst, smoothingRadius);
         float densityNeigh = Densities[j];
         float sharedPressure = CalculateSharedPressure(density, densityNeigh);
+        if(densityNeigh < 0.0001)
+            continue;
         pressureForce += sharedPressure * dir * slope / densityNeigh;
     }
     
@@ -161,9 +176,35 @@ float3 PushFromSphere(float3 particlePos, float3 sphereCenter, float sphereRadiu
     if (dst > sphereRadius * sphereRadius)
         return float3(0, 0, 0);
     dst = sqrt(dst);
-    float3 dir = dst > 0 ? offset / dst : float3(0, 1, 0);
+    float3 dir = dst > 0.0001 ? offset / dst : float3(0, 1, 0);
     return dir * pushForce;
 
+}
+
+float3 PushFromBox(float3 particlePos, float3 boxCenter, float3 boxSize, float pushForce)
+{
+    float3 pos = particlePos;
+    float3 offset = pos - boxCenter;
+    float3 halfSize = boxSize / 2;
+    float3 push = float3(0, 0, 0);
+    if (abs(offset.x) < halfSize.x)
+    {
+        float sign = offset.x > 0 ? 1 : -1;
+        push.x += sign * (abs(offset.x) - halfSize.x);
+    }
+    if (abs(offset.y) < halfSize.y)
+    {
+        float sign = offset.y > 0 ? 1 : -1;
+        push.y += sign * (abs(offset.y) - halfSize.y);
+    }
+    if (abs(offset.z) < halfSize.z)
+    {
+        float sign = offset.z > 0 ? 1 : -1;
+        push.z += sign * (abs(offset.z) - halfSize.z);
+    }
+    if(dot(push, push) > 0)
+        push = normalize(push) * pushForce;
+    return push;
 }
 
 
@@ -183,9 +224,17 @@ void ExternalForces(uint3 id : SV_DispatchThreadID)
         float4 sphere = SphereObstacles[j];
         float3 center = sphere.xyz;
         float radius = sphere.w;
-        float3 push = PushFromSphere(PredictedPositions[i], center, radius, 100);
+        float3 push = PushFromSphere(PredictedPositions[i], center, radius, 20);
         Velocities[i] += push * deltaTime;
     }
 
+    // bound velocity
+    
+    float magnitude = length(Velocities[i]);
+    if (magnitude > 10)
+    {
+        Velocities[i] = normalize(Velocities[i]) * 10;
+    }
+    
     PredictedPositions[i] = Positions[i] + Velocities[i] * 1/120.0;
 }

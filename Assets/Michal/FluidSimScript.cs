@@ -1,12 +1,5 @@
-using System.Collections;
-using System.Collections.Generic;
 using System.Linq;
-using Unity.VisualScripting;
-using UnityEditor.UI;
 using UnityEngine;
-using UnityEngine.Rendering;
-using UnityEngine.Subsystems;
-using UnityEngine.UIElements;
 
 public class FluidSimScript : MonoBehaviour
 {

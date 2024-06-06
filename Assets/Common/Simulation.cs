@@ -1,5 +1,3 @@
-using System.Collections;
-using System.Collections.Generic;
 using System.Linq;
 using Unity.Mathematics;
 using UnityEngine;
@@ -24,7 +22,21 @@ public class Simulation : MonoBehaviour
 
     private int closeSpheres = 0;
     private Vector4[] sphereData;
-    
+
+    [SerializeField]
+    private int maxParticles;
+    private int lastFrameParticles;
+    private int oldestPatrticle = 0;
+
+    [Header("Spawn New Particles")]
+    [SerializeField]
+    Transform spawnNewParticlesTransform;
+    [SerializeField]
+    float spawnRadius = 1;
+    [SerializeField]
+    Vector3 spawnVelocity = new Vector3(0, 0, 0);
+    [SerializeField]
+    int spawnparticlesPerFXDUpdate = 1;
 
     // Buffers
     public ComputeBuffer positionBuffer { get; private set; }
@@ -45,15 +57,17 @@ public class Simulation : MonoBehaviour
     private void Start()
     {
         Debug.Log("Simulation Start");
+        compute = Instantiate(compute);
+
+        lastFrameParticles = numParticles;
 
         //create buffers here
-        positionBuffer = ComputeHelper.CreateBuffer<Vector3>(numParticles);
-        velocityBuffer = ComputeHelper.CreateBuffer<Vector3>(numParticles);
-        densityBuffer = ComputeHelper.CreateBuffer<float>(numParticles);
-        predictedPositionsBuffer = ComputeHelper.CreateBuffer<float3>(numParticles);
+        positionBuffer = ComputeHelper.CreateBuffer<Vector3>(maxParticles);
+        velocityBuffer = ComputeHelper.CreateBuffer<Vector3>(maxParticles);
+        densityBuffer = ComputeHelper.CreateBuffer<float>(maxParticles);
+        predictedPositionsBuffer = ComputeHelper.CreateBuffer<float3>(maxParticles);
         externalSpheres = ComputeHelper.CreateBuffer<float4>(sphereObstacles.Length);
         sphereData = new Vector4[sphereObstacles.Length];
-
 
         // tell each compute shader method (called kernel) which buffers will be used
         ComputeHelper.SetBuffer(compute, "Positions", positionBuffer, updatePositionKernel, calculateDensityKernel, calculatePressureForceKernel, externalForcesKernel);
@@ -71,15 +85,38 @@ public class Simulation : MonoBehaviour
 
     public void SetComputeVariables()
     {
-        // set all the variables in the compute shader
-        // this is done once at the start
-        // to see changes, you need to restart the simulation
+        if(numParticles != maxParticles)
+            numParticles += spawnparticlesPerFXDUpdate;
+        else
+            numParticles -= spawnparticlesPerFXDUpdate;
+
+
         compute.SetFloats("boundsSize", new float[]
         {
             display.UpperBoundary().x - display.scale,
             display.UpperBoundary().y - display.scale,
             display.UpperBoundary().z - display.scale
         });
+
+        if(numParticles > maxParticles)
+            numParticles = maxParticles;
+
+        if (lastFrameParticles < numParticles){
+            int particlesToSpawn = numParticles - lastFrameParticles;
+            float3[] newPositions = new float3[particlesToSpawn];
+            float3[] newVelocities = new float3[particlesToSpawn];
+
+            for(int i = 0; i < particlesToSpawn; i++)
+            {
+                newPositions[i] = (spawnNewParticlesTransform.position - transform.position) + Random.insideUnitSphere * spawnRadius;
+                newVelocities[i] = spawnVelocity;
+            }
+
+            LoadNewParticle(particlesToSpawn, newPositions, newVelocities);
+        }
+
+        display.numParticles = numParticles;
+
         compute.SetFloat("deltaTime", Time.fixedDeltaTime);
         compute.SetInt("numParticles", numParticles);
         compute.SetFloats("gravity", new float[] { gravity.x, gravity.y, gravity.z });
@@ -92,8 +129,10 @@ public class Simulation : MonoBehaviour
         compute.SetMatrix("worldToLocal", transform.worldToLocalMatrix);
 
         CheckClosestSphere();
-        externalSpheres.SetData(sphereData);
+        if(closeSpheres > 0)
+            externalSpheres.SetData(sphereData);
         compute.SetInt("sphereCount", closeSpheres);
+        lastFrameParticles = numParticles;
     }
 
     //do sim here
@@ -134,6 +173,35 @@ public class Simulation : MonoBehaviour
         }
     }
 
+    public void LoadNewParticle(int count, float3[] newPositions, float3[] newVelocities)
+    {
+        float3[] positions = new float3[maxParticles];
+        float3[] velocities = new float3[maxParticles];
+        float[] density = new float[maxParticles];
+        float3[] predictedPositions = new float3[maxParticles];
+
+        positionBuffer.GetData(positions);
+        velocityBuffer.GetData(velocities);
+        densityBuffer.GetData(density);
+
+        for (int i = 0; i < count; i++)
+        {
+            positions[oldestPatrticle] = newPositions[i];
+            velocities[oldestPatrticle] = newVelocities[i];
+            predictedPositions[oldestPatrticle] = newPositions[i] + newVelocities[i];
+            density[oldestPatrticle] = 1;
+
+            oldestPatrticle++;
+            if (oldestPatrticle >= numParticles)
+                oldestPatrticle = 0;
+        }
+
+        positionBuffer.SetData(positions);
+        velocityBuffer.SetData(velocities);
+        densityBuffer.SetData(density);
+        predictedPositionsBuffer.SetData(predictedPositions);
+    }
+
     public void SpawnParticles(int numParticles)
     {
         this.numParticles = numParticles;
@@ -143,11 +211,11 @@ public class Simulation : MonoBehaviour
         Vector3 lower = display.LowerBoundary()/2;
         Vector3 upper = display.UpperBoundary()/2;
 
-        float3[] positions = new float3[numParticles];
-        float3[] velocities = new float3[numParticles];
-        float[] density = new float[numParticles];
+        float3[] positions = new float3[maxParticles];
+        float3[] velocities = new float3[maxParticles];
+        float[] density = new float[maxParticles];
 
-        int countPerSide = (int)Mathf.Pow(numParticles, 1f / 3f) + 1;
+        int countPerSide = (int)Mathf.Pow(maxParticles, 1f / 3f) + 1;
         float stepX = (upper.x - lower.x) / countPerSide;
         float stepY = (upper.y - lower.y) / countPerSide;
         float stepZ = (upper.z - lower.z) / countPerSide;
@@ -163,14 +231,20 @@ public class Simulation : MonoBehaviour
             velocities[i] = 0;
             density[i] = 1;
         }
+        for (int i = numParticles; i < maxParticles; i++)
+        {
+            positions[i] = spawnNewParticlesTransform.position - transform.position;
+            velocities[i] = 0;
+            density[i] = 0;
+        }
 
         positionBuffer.SetData(positions);
         velocityBuffer.SetData(velocities);
         predictedPositionsBuffer.SetData(positions);
         densityBuffer.SetData(density);
 
-        display.positions = new Vector3[numParticles];
-        display.density = new float[numParticles];
+        display.positions = new Vector3[maxParticles];
+        display.density = new float[maxParticles];
     }
 
     void OnDestroy()
@@ -180,11 +254,16 @@ public class Simulation : MonoBehaviour
         velocityBuffer.Release();
         densityBuffer.Release();
         predictedPositionsBuffer.Release();
+        externalSpheres.Release();
     }
 
     private void OnDrawGizmos()
     {
         Gizmos.color = Color.yellow;
         Gizmos.DrawWireSphere(transform.position, smoothingRadius);
+        if(spawnNewParticlesTransform == null)
+                        return;
+        Gizmos.color = Color.green;
+        Gizmos.DrawWireSphere(spawnNewParticlesTransform.position, spawnRadius);
     }
 }

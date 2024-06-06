@@ -1,7 +1,4 @@
-﻿using System.Collections;
-using System.Collections.Generic;
-using UnityEditor.Experimental.GraphView;
-using UnityEngine;
+﻿using UnityEngine;
 
 //The class OrbitingParticle is derived from MonoBehaviour and controls the behavior of the orbiting particle in the scene.
 public class OrbitingStars : MonoBehaviour
