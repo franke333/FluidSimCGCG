@@ -7064,6 +7064,7 @@ GameObject:
   - component: {fileID: 369324826}
   - component: {fileID: 369324825}
   - component: {fileID: 369324824}
+  - component: {fileID: 369324827}
   - component: {fileID: 369324823}
   m_Layer: 0
   m_Name: Sphere (1)
@@ -7152,12 +7153,27 @@ Transform:
   m_GameObject: {fileID: 369324822}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: -12.31, y: 9.84, z: 26.48}
+  m_LocalPosition: {x: -12.31, y: 10, z: 26.48}
   m_LocalScale: {x: 3, y: 3, z: 3}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &369324827
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 369324822}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 886786784e31e614f900f292ee6e6358, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  yTop: 10
+  yBottom: -3
+  speed: 2
 --- !u!1 &371849948
 GameObject:
   m_ObjectHideFlags: 0
@@ -18306,7 +18322,7 @@ MonoBehaviour:
   - {fileID: 1584940771}
   - {fileID: 971488634}
   - {fileID: 590053212}
-  maxParticles: 5000
+  maxParticles: 9000
   spawnNewParticlesTransform: {fileID: 1276859195}
   spawnRadius: 0.58
   spawnVelocity: {x: -0.4, y: 0, z: 0}
@@ -18320,8 +18336,8 @@ Transform:
   m_GameObject: {fileID: 499843160}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 2.43, y: 2.85, z: 42.43}
-  m_LocalScale: {x: 5.263083, y: 2.9168584, z: 3.8001213}
+  m_LocalPosition: {x: 0.91, y: 2.85, z: 37.52}
+  m_LocalScale: {x: 6.837271, y: 2.9168584, z: 8.353427}
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 1276859195}
@@ -27156,7 +27172,7 @@ MonoBehaviour:
   sphereObstacles:
   - {fileID: 369324822}
   boxObstacles: []
-  maxParticles: 4500
+  maxParticles: 7000
   spawnNewParticlesTransform: {fileID: 926396129}
   spawnRadius: 0.58
   spawnVelocity: {x: -1, y: 0, z: 0}
@@ -29028,7 +29044,7 @@ Transform:
   m_GameObject: {fileID: 1276859194}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0.848, y: -1.042, z: 0.449}
+  m_LocalPosition: {x: 0.848, y: -1.042, z: 0.797}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -48384,13 +48400,13 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1733100844}
   serializedVersion: 2
-  m_LocalRotation: {x: 0.08551791, y: -0.04148158, z: -0.018484531, w: 0.9953011}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 2.98, y: 4.29, z: 37.44}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 0}
-  m_LocalEulerAnglesHint: {x: 9.712, y: -4.99, z: -2.552}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &1733100849
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -49510,7 +49526,7 @@ MonoBehaviour:
   - {fileID: 1763016181}
   - {fileID: 1849042921}
   - {fileID: 1426972877}
-  maxParticles: 5000
+  maxParticles: 7000
   spawnNewParticlesTransform: {fileID: 1725352227}
   spawnRadius: 1.69
   spawnVelocity: {x: 0, y: 1, z: 0}
